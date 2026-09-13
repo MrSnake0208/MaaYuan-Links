@@ -42,7 +42,7 @@ GitHub 使用原 `github01.jpg`，QQ 使用原 `QQ01.jpg`。对于含留白、�
 
 ## GitHub 自动部署
 
-`.github/workflows/gce_deploy.yml` 会在 `dev` 分支 push 后构建并部署，也可以从 GitHub Actions 页面手动运行。它沿用 MaaYuan Share 的 SSH/SCP 部署方式，将 `dist/` 上传到临时目录，再切换到服务器上的 `/var/www/maayuan-links`。
+`.github/workflows/gce_deploy.yml` 会在 `master` 分支 push 后构建并部署，也可以从 GitHub Actions 页面手动运行。它沿用 MaaYuan Share 的 SSH/SCP 部署方式，将 `dist/` 上传到临时目录，再切换到服务器上的 `/var/www/maayuan-links`。
 
 在 GitHub 仓库的 Settings → Secrets and variables → Actions 中配置以下 Repository secrets：
 
@@ -59,4 +59,4 @@ sudo install -d -m 0755 /var/www/maayuan-links
 sudo chown -R <SSH_USER>:<SSH_USER> /var/www/maayuan-links
 ```
 
-之后 GitHub Actions 可以直接清理和写入该目录，不再需要 sudo。若仓库使用其他生产分支，将 workflow 中 `push.branches` 的 `dev` 改为实际分支名；部署完成后由服务器现有的 Nginx 或其他 Web 服务指向 `/var/www/maayuan-links`。
+之后 GitHub Actions 可以直接清理和写入该目录，不再需要 sudo。若仓库使用其他生产分支，将 workflow 中 `push.branches` 的 `master` 改为实际分支名；部署完成后由服务器现有的 Nginx 或其他 Web 服务指向 `/var/www/maayuan-links`。

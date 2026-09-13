@@ -50,8 +50,6 @@ jobs:
           username: ${{ secrets.VPS_USER_C }}
           key: ${{ secrets.VPS_SSH_KEY_C }}
           envs: DEPLOY_DIR
-        env:
-          DEPLOY_DIR: /var/www/maayuan-links
           script: |
             set -eu
             test -d /tmp/maayuan-links_tmp
@@ -60,3 +58,5 @@ jobs:
             cp -a /tmp/maayuan-links_tmp/. "$DEPLOY_DIR"/
             rm -rf /tmp/maayuan-links_tmp
             echo "✅ Deployed to $DEPLOY_DIR"
+        env:
+          DEPLOY_DIR: /var/www/maayuan-links
