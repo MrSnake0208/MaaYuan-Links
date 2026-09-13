@@ -49,15 +49,14 @@ jobs:
           host: ${{ secrets.VPS_HOST_C }}
           username: ${{ secrets.VPS_USER_C }}
           key: ${{ secrets.VPS_SSH_KEY_C }}
+          envs: DEPLOY_DIR
+        env:
+          DEPLOY_DIR: /var/www/maayuan-links
           script: |
             set -eu
-            sudo mkdir -p /var/www
-            sudo rm -rf /tmp/maayuan-links_staged
-            sudo mv /tmp/maayuan-links_tmp /tmp/maayuan-links_staged
-            sudo rm -rf /var/www/maayuan-links_old
-            if sudo test -e /var/www/maayuan-links; then
-              sudo mv /var/www/maayuan-links /var/www/maayuan-links_old
-            fi
-            sudo mv /tmp/maayuan-links_staged /var/www/maayuan-links
-            sudo rm -rf /var/www/maayuan-links_old
-            echo "✅ Deployed to /var/www/maayuan-links"
+            test -d /tmp/maayuan-links_tmp
+            install -d -m 0755 "$DEPLOY_DIR"
+            find "$DEPLOY_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+            cp -a /tmp/maayuan-links_tmp/. "$DEPLOY_DIR"/
+            rm -rf /tmp/maayuan-links_tmp
+            echo "✅ Deployed to $DEPLOY_DIR"

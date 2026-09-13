@@ -52,4 +52,11 @@ VPS_USER_C       # SSH 用户名
 VPS_SSH_KEY_C    # 对应用户的 SSH 私钥（完整内容）
 ```
 
-服务器上的 SSH 用户需要能够执行 `sudo mkdir`、`sudo mv` 和 `sudo rm`，建议为这些命令配置免密码 sudo。若仓库使用其他生产分支，将 workflow 中 `push.branches` 的 `dev` 改为实际分支名；部署完成后由服务器现有的 Nginx 或其他 Web 服务指向 `/var/www/maayuan-links`。
+部署脚本不调用 sudo，避免 GitHub Actions 因为没有终端而卡在 sudo 密码提示。首次部署前，请使用 SSH 登录服务器并手动执行一次下面的目录授权命令，把 `<SSH_USER>` 替换成 `VPS_USER_C` 的实际值：
+
+```sh
+sudo install -d -m 0755 /var/www/maayuan-links
+sudo chown -R <SSH_USER>:<SSH_USER> /var/www/maayuan-links
+```
+
+之后 GitHub Actions 可以直接清理和写入该目录，不再需要 sudo。若仓库使用其他生产分支，将 workflow 中 `push.branches` 的 `dev` 改为实际分支名；部署完成后由服务器现有的 Nginx 或其他 Web 服务指向 `/var/www/maayuan-links`。
