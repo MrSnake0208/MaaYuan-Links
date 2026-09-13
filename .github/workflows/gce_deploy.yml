@@ -3,7 +3,7 @@ name: Build and Deploy to GCE
 on:
   push:
     branches:
-      - dev
+      - master
   workflow_dispatch:
 
 permissions:
@@ -38,8 +38,8 @@ jobs:
           host: ${{ secrets.VPS_HOST_C }}
           username: ${{ secrets.VPS_USER_C }}
           key: ${{ secrets.VPS_SSH_KEY_C }}
-          source: './dist/*'
-          target: '/tmp/maayuan-links_tmp/'
+          source: "./dist/*"
+          target: "/tmp/maayuan-links_tmp/"
           overwrite: true
           strip_components: 1
 
