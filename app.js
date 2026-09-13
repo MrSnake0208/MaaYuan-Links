@@ -19,7 +19,8 @@ const linkGroups = [
     title: '主要功能', note: '探索 MaaYuan', icon: 'box', primary: true,
     links: [
       { title: 'MaaYuan | 代号鸢/如鸢小助手', description: '基于 MaaFramework 的自动化小助手', url: 'https://maayuan.com/', icon: 'sparkles', tone: 'gold', image: './assets/images/links/maayuan.png' },
-      { title: 'YuanHub | 鸢鸢相抱', description: 'MaaYuan 社区工具与内容入口', url: 'https://hub.maayuan.com/', icon: 'garden', tone: 'sage', image: null },
+      // 暂时隐藏鸢鸢相抱，恢复时取消下一行注释即可。
+      // { title: 'YuanHub | 鸢鸢相抱', description: 'MaaYuan 社区工具与内容入口', url: 'https://hub.maayuan.com/', icon: 'garden', tone: 'sage', image: null },
       { title: 'MaaYuan Share | 作业站', description: '浏览与分享 MaaYuan 作业', url: 'https://share.maayuan.com/', icon: 'book', tone: 'clay', image: './assets/images/links/maayuan-share.png' },
     ],
   },
