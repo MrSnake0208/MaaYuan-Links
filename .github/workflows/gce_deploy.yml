@@ -1,0 +1,63 @@
+name: Build and Deploy to GCE
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maayuan-links-production
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check source files
+        run: npm run check
+
+      - name: Build static site
+        run: npm run build
+
+      - name: Upload release to temporary folder
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST_C }}
+          username: ${{ secrets.VPS_USER_C }}
+          key: ${{ secrets.VPS_SSH_KEY_C }}
+          source: './dist/*'
+          target: '/tmp/maayuan-links_tmp/'
+          overwrite: true
+          strip_components: 1
+
+      - name: Switch release on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST_C }}
+          username: ${{ secrets.VPS_USER_C }}
+          key: ${{ secrets.VPS_SSH_KEY_C }}
+          script: |
+            set -eu
+            sudo mkdir -p /var/www
+            sudo rm -rf /tmp/maayuan-links_staged
+            sudo mv /tmp/maayuan-links_tmp /tmp/maayuan-links_staged
+            sudo rm -rf /var/www/maayuan-links_old
+            if sudo test -e /var/www/maayuan-links; then
+              sudo mv /var/www/maayuan-links /var/www/maayuan-links_old
+            fi
+            sudo mv /tmp/maayuan-links_staged /var/www/maayuan-links
+            sudo rm -rf /var/www/maayuan-links_old
+            echo "✅ Deployed to /var/www/maayuan-links"

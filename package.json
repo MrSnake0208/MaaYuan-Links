@@ -1,0 +1,11 @@
+{
+  "name": "maayuan-links",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/site.mjs serve",
+    "check": "node --check app.js && node --check scripts/site.mjs",
+    "build": "node scripts/site.mjs build"
+  },
+  "engines": { "node": ">=18" }
+}
