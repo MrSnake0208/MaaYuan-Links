@@ -18,18 +18,18 @@ const linkGroups = [
   {
     title: '主要功能', note: '探索 MaaYuan', icon: 'box', primary: true,
     links: [
-      { title: 'MaaYuan | 代号鸢/如鸢小助手', description: '基于 MaaFramework 的自动化小助手', url: 'https://maayuan.com/', icon: 'sparkles', tone: 'gold', image: './assets/images/links/maayuan.png' },
-      // 暂时隐藏鸢鸢相抱，恢复时取消下一行注释即可。
-      // { title: 'YuanHub | 鸢鸢相抱', description: 'MaaYuan 社区工具与内容入口', url: 'https://hub.maayuan.com/', icon: 'garden', tone: 'sage', image: null },
-      { title: 'MaaYuan Share | 作业站', description: '浏览与分享 MaaYuan 作业', url: 'https://share.maayuan.com/', icon: 'book', tone: 'clay', image: './assets/images/links/maayuan-share.png' },
+      { title: 'MaaYuan | 官方站', description: '安装下载与常见问题，一站搞定', url: 'https://maayuan.com/', icon: 'sparkles', tone: 'gold', image: './assets/images/links/maayuan.png' },
+      // 暂时隐藏 YuanHub，恢复时取消下一行注释即可。
+      // { title: 'YuanHub | 鸢鸢相抱 工具站', description: '六边形全能工具平台，满足殿下日常需求', url: 'https://hub.maayuan.com/', icon: 'garden', tone: 'sage', image: null },
+      { title: 'MaaYuan Share | 作业站', description: '可制作/分享/下载MaaYuan的作业平台', url: 'https://share.maayuan.com/', icon: 'book', tone: 'clay', image: './assets/images/links/maayuan-share.png' },
     ],
   },
   {
     title: '期待关注', note: '把日常分享给你', icon: 'heart',
     links: [
-      { title: '小红书 | 麻圆（不识字版）', url: 'https://www.xiaohongshu.com/user/profile/685e3301000000001b0229ed', icon: 'notebook', tone: 'rose', image: './assets/images/links/xiaohongshu.jpg', crop: [1085, 1080, 270, 270, 530] },
-      { title: 'B站 | 麻圆_不识字版', url: 'https://space.bilibili.com/3690998968355771', icon: 'video', tone: 'rose', image: './assets/images/links/bilibili.jpg', crop: [1095, 1080, 280, 250, 560] },
-      { title: 'GitHub | MaaYuan', url: 'https://github.com/syoius/MaaYuan', icon: 'code', tone: 'stone', image: './assets/images/links/github.jpg', crop: [1080, 1163, 310, 10, 450] },
+      { title: '小红书 | 麻圆（不识字版）', description: '关注麻圆，掌握第一手图文动态', url: 'https://www.xiaohongshu.com/user/profile/685e3301000000001b0229ed', icon: 'notebook', tone: 'rose', image: './assets/images/links/xiaohongshu.jpg', crop: [1085, 1080, 270, 270, 530] },
+      { title: 'B站 | 麻圆_不识字版', description: '更多视频讲解让殿下看一遍就上手', url: 'https://space.bilibili.com/3690998968355771', icon: 'video', tone: 'rose', image: './assets/images/links/bilibili.jpg', crop: [1095, 1080, 280, 250, 560] },
+      { title: 'GitHub | MaaYuan', description: 'Make MaaYuan great again', url: 'https://github.com/syoius/MaaYuan', icon: 'code', tone: 'stone', image: './assets/images/links/github.jpg', crop: [1080, 1163, 310, 10, 450] },
     ],
   },
   {
