@@ -5,6 +5,11 @@ on:
     branches:
       - master
   workflow_dispatch:
+    inputs:
+      force_assets:
+        description: Re-upload every image asset, even if the server already has them
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -13,9 +18,19 @@ concurrency:
   group: maayuan-links-production
   cancel-in-progress: true
 
+env:
+  DEPLOY_HOST: ${{ secrets.VPS_HOST_C }}
+  DEPLOY_USER: ${{ secrets.VPS_USER_C }}
+  DEPLOY_PORT: ${{ secrets.VPS_PORT_C || '22' }}
+  DEPLOY_DIR: /var/www/maayuan-links
+  ASSETS_REV_FILE: /var/www/.maayuan-links-assets-rev
+  FORCE_ASSETS: ${{ github.event.inputs.force_assets }}
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # Bounded on purpose: a degraded runner -> server link must fail fast instead of hanging for hours.
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -32,31 +47,120 @@ jobs:
       - name: Build static site
         run: npm run build
 
-      - name: Upload release to temporary folder
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST_C }}
-          username: ${{ secrets.VPS_USER_C }}
-          key: ${{ secrets.VPS_SSH_KEY_C }}
-          source: "./dist/*"
-          target: "/tmp/maayuan-links_tmp/"
-          overwrite: true
-          strip_components: 1
+      - name: Report payload size
+        run: |
+          du -sh dist
+          echo "files: $(find dist -type f | wc -l)"
 
-      - name: Switch release on server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST_C }}
-          username: ${{ secrets.VPS_USER_C }}
-          key: ${{ secrets.VPS_SSH_KEY_C }}
-          envs: DEPLOY_DIR
-          script: |
-            set -eu
-            test -d /tmp/maayuan-links_tmp
-            install -d -m 0755 "$DEPLOY_DIR"
-            find "$DEPLOY_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
-            cp -a /tmp/maayuan-links_tmp/. "$DEPLOY_DIR"/
-            rm -rf /tmp/maayuan-links_tmp
-            echo "✅ Deployed to $DEPLOY_DIR"
+      - name: Prepare deploy SSH key
         env:
-          DEPLOY_DIR: /var/www/maayuan-links
+          DEPLOY_KEY: ${{ secrets.VPS_SSH_KEY_C }}
+        run: |
+          set -eu
+          test -n "$DEPLOY_KEY" || { echo "::error::VPS_SSH_KEY_C is empty or unavailable. Add it as a repository secret."; exit 1; }
+          case "$DEPLOY_KEY" in
+            "-----BEGIN OPENSSH PRIVATE KEY-----"*|"-----BEGIN RSA PRIVATE KEY-----"*) ;;
+            *) echo "::error::VPS_SSH_KEY_C must contain the complete private key, including BEGIN and END lines."; exit 1 ;;
+          esac
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          ssh-keygen -y -f "$HOME/.ssh/deploy_key" > /dev/null
+          cat >> "$HOME/.ssh/config" <<EOF
+          Host maayuan-deploy
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            Port $DEPLOY_PORT
+            IdentityFile $HOME/.ssh/deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking accept-new
+            ServerAliveInterval 15
+            ServerAliveCountMax 8
+            ConnectTimeout 20
+            Compression no
+            IPQoS cs0
+          EOF
+          chmod 600 "$HOME/.ssh/config"
+
+      # The 23 random logos are 8.5 MB of the 9.4 MB payload and almost never change, so they are
+      # published once and re-sent only when the built files really differ from what the server
+      # already has. The revision is a hash of the exact files that would be uploaded.
+      - name: Decide whether image assets need uploading
+        id: assets
+        run: |
+          set -euo pipefail
+          if command -v sha256sum > /dev/null 2>&1; then sum="sha256sum"; else sum="shasum -a 256"; fi
+          rev="$(cd dist && find assets -type f -exec $sum {} + | LC_ALL=C sort | $sum | cut -d' ' -f1)"
+          test -n "$rev"
+          echo "rev=$rev" >> "$GITHUB_OUTPUT"
+          remote_rev="$(ssh maayuan-deploy "cat '$ASSETS_REV_FILE' 2>/dev/null || true")"
+          if [ "${FORCE_ASSETS:-}" = "true" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "force_assets was requested; image assets will be uploaded."
+          elif [ "$remote_rev" = "$rev" ] && ssh maayuan-deploy "test -d '$DEPLOY_DIR/assets/images/maayuan'"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Image assets already on the server ($rev); publishing HTML/CSS/JS only."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Image assets differ from the server (${remote_rev:-none} -> $rev); uploading them."
+          fi
+
+      # ~6 KB over one SSH stream: seconds even on a congested cross-border link.
+      - name: Publish HTML, CSS and JS
+        run: |
+          set -euo pipefail
+          tar -czf "$RUNNER_TEMP/text.tar.gz" -C dist index.html styles.css app.js
+          bytes="$(wc -c < "$RUNNER_TEMP/text.tar.gz")"
+          start=$SECONDS
+          cat "$RUNNER_TEMP/text.tar.gz" | ssh maayuan-deploy "
+            set -eu
+            install -d -m 0755 '$DEPLOY_DIR'
+            rm -rf '$DEPLOY_DIR/.text-incoming'
+            mkdir -p '$DEPLOY_DIR/.text-incoming'
+            tar -xzf - -C '$DEPLOY_DIR/.text-incoming'
+            test -s '$DEPLOY_DIR/.text-incoming/index.html'
+            find '$DEPLOY_DIR' -maxdepth 1 -type f -delete
+            mv -f '$DEPLOY_DIR/.text-incoming/index.html' '$DEPLOY_DIR/.text-incoming/styles.css' '$DEPLOY_DIR/.text-incoming/app.js' '$DEPLOY_DIR/'
+            rm -rf '$DEPLOY_DIR/.text-incoming'
+          "
+          elapsed=$((SECONDS - start))
+          echo "Published ${bytes} bytes of HTML/CSS/JS in ${elapsed}s (~$((bytes / 1024 / (elapsed > 0 ? elapsed : 1))) KiB/s)"
+
+      - name: Publish image assets
+        if: steps.assets.outputs.changed == 'true'
+        env:
+          ASSETS_REV: ${{ steps.assets.outputs.rev }}
+        run: |
+          set -euo pipefail
+          tar -czf "$RUNNER_TEMP/assets.tar.gz" -C dist assets
+          bytes="$(wc -c < "$RUNNER_TEMP/assets.tar.gz")"
+          start=$SECONDS
+          echo "Uploading ${bytes} bytes of image assets ..."
+          # Unpack next to the live folder and swap by rename, so the site never serves missing logos.
+          cat "$RUNNER_TEMP/assets.tar.gz" | ssh maayuan-deploy "
+            set -eu
+            install -d -m 0755 '$DEPLOY_DIR'
+            rm -rf '$DEPLOY_DIR/.assets-incoming' '$DEPLOY_DIR/.assets-previous'
+            mkdir -p '$DEPLOY_DIR/.assets-incoming'
+            tar -xzf - -C '$DEPLOY_DIR/.assets-incoming'
+            test -d '$DEPLOY_DIR/.assets-incoming/assets/images/maayuan'
+            mv '$DEPLOY_DIR/assets' '$DEPLOY_DIR/.assets-previous' 2>/dev/null || true
+            mv '$DEPLOY_DIR/.assets-incoming/assets' '$DEPLOY_DIR/assets'
+            rm -rf '$DEPLOY_DIR/.assets-previous' '$DEPLOY_DIR/.assets-incoming'
+          "
+          ssh maayuan-deploy "printf '%s\n' '$ASSETS_REV' > '$ASSETS_REV_FILE'"
+          elapsed=$((SECONDS - start))
+          echo "Published ${bytes} bytes of image assets in ${elapsed}s (~$((bytes / 1024 / (elapsed > 0 ? elapsed : 1))) KiB/s)"
+
+      - name: Verify deployed release
+        run: |
+          set -eu
+          ssh maayuan-deploy "
+            set -eu
+            test -s '$DEPLOY_DIR/index.html'
+            test -s '$DEPLOY_DIR/styles.css'
+            test -s '$DEPLOY_DIR/app.js'
+            test -d '$DEPLOY_DIR/assets/images/maayuan'
+            test -d '$DEPLOY_DIR/assets/images/links'
+            echo '✅ Deployed to $DEPLOY_DIR'
+          "

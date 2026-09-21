@@ -42,7 +42,14 @@ GitHub 使用原 `github01.jpg`，QQ 使用原 `QQ01.jpg`。对于含留白、�
 
 ## GitHub 自动部署
 
-`.github/workflows/gce_deploy.yml` 会在 `master` 分支 push 后构建并部署，也可以从 GitHub Actions 页面手动运行。它沿用 MaaYuan Share 的 SSH/SCP 部署方式，将 `dist/` 上传到临时目录，再切换到服务器上的 `/var/www/maayuan-links`。
+`.github/workflows/gce_deploy.yml` 会在 `master` 分支 push 后构建并部署，也可以从 GitHub Actions 页面手动运行。部署过程：
+
+1. `npm run check` 与 `npm run build` 生成 `dist/`。
+2. 通过一条 SSH 流（`tar.gz`）把 `index.html`、`styles.css`、`app.js` 写入服务器的 `/var/www/maayuan-links`，压缩后约 6 KB。
+3. `dist/assets/` 约 8.5 MB，且只在新增或替换图片时变化：脚本对构建出的图片做内容哈希，与服务器上 `/var/www/.maayuan-links-assets-rev` 中记录的值比对，只有确实不同才重新上传。上传时先在部署目录内解包、再改名替换，站点不会出现图片缺失窗口。
+4. 校验入口文件与图片目录存在后才算部署成功。
+
+因此日常只改文案时每次只传输约 6 KB，跨境链路拥塞时也能在秒级完成；新增或替换 `assets/images/` 里的图片会自动触发完整图片同步。需要强制重传全部图片时，在 Actions 页面手动运行并勾选 `force_assets`；删除服务器上的 `.maayuan-links-assets-rev` 也会让下一次部署重新上传图片。job 设置了 `timeout-minutes: 20`，链路异常时会明确失败，而不是长时间挂起。
 
 在 GitHub 仓库的 Settings → Secrets and variables → Actions 中配置以下 Repository secrets：
 
@@ -50,6 +57,7 @@ GitHub 使用原 `github01.jpg`，QQ 使用原 `QQ01.jpg`。对于含留白、�
 VPS_HOST_C       # 服务器地址或 IP
 VPS_USER_C       # SSH 用户名
 VPS_SSH_KEY_C    # 对应用户的 SSH 私钥（完整内容）
+VPS_PORT_C       # 可选，SSH 端口，默认 22
 ```
 
 部署脚本不调用 sudo，避免 GitHub Actions 因为没有终端而卡在 sudo 密码提示。首次部署前，请使用 SSH 登录服务器并手动执行一次下面的目录授权命令，把 `<SSH_USER>` 替换成 `VPS_USER_C` 的实际值：
