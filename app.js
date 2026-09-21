@@ -20,7 +20,7 @@ const linkGroups = [
     links: [
       { title: 'MaaYuan | 官方站', description: '安装下载与常见问题，一站搞定', url: 'https://maayuan.com/', icon: 'sparkles', tone: 'gold', image: './assets/images/links/maayuan.png' },
       // 暂时隐藏 YuanHub，恢复时取消下一行注释即可。
-      // { title: 'YuanHub | 鸢鸢相抱 工具站', description: '六边形全能工具平台，满足殿下日常需求', url: 'https://hub.maayuan.com/', icon: 'garden', tone: 'sage', image: null },
+      { title: 'YuanHub | 鸢鸢相抱 工具站', description: '六边形全能工具平台，满足殿下日常需求', url: 'https://hub.maayuan.com/', icon: 'garden', tone: 'sage', image: null },
       { title: 'MaaYuan Share | 作业站', description: '可制作/分享/下载MaaYuan的作业平台', url: 'https://share.maayuan.com/', icon: 'book', tone: 'clay', image: './assets/images/links/maayuan-share.png' },
     ],
   },
