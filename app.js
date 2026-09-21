@@ -6,10 +6,10 @@ const logoVariants = [
   'original-color', 'original-cowhide', 'pumpkin-head', 'soul',
   'weaver-girl', 'witch',
 ];
-const selectedLogo = `./assets/images/maayuan/maayuan-${logoVariants[Math.floor(Math.random() * logoVariants.length)]}.png`;
+const selectedLogo = `./assets/images/maayuan/maayuan-${logoVariants[Math.floor(Math.random() * logoVariants.length)]}.webp`;
 const brandLogo = document.querySelector('.brand-logo');
 brandLogo.addEventListener('error', () => {
-  brandLogo.src = './assets/images/maayuan/maayuan-default.png';
+  brandLogo.src = './assets/images/maayuan/maayuan-default.webp';
 }, { once: true });
 brandLogo.src = selectedLogo;
 

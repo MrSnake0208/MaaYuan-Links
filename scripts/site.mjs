@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { copyFile, mkdir, readFile, readdir } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const root = new URL('../', import.meta.url);
@@ -18,6 +18,8 @@ const types = { html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8'
 
 if (process.argv[2] === 'build') {
   const destination = new URL('dist/', root);
+  // Rebuild from scratch so renamed or removed assets never linger in the deploy payload.
+  await rm(destination, { recursive: true, force: true });
   await mkdir(destination, { recursive: true });
   for (const file of files) {
     await mkdir(new URL('.', new URL(file, destination)), { recursive: true });
