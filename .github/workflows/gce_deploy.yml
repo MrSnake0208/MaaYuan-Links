@@ -23,7 +23,6 @@ env:
   DEPLOY_USER: ${{ secrets.VPS_USER_C }}
   DEPLOY_PORT: ${{ secrets.VPS_PORT_C || '22' }}
   DEPLOY_DIR: /var/www/maayuan-links
-  ASSETS_REV_FILE: /var/www/.maayuan-links-assets-rev
   FORCE_ASSETS: ${{ github.event.inputs.force_assets }}
 
 jobs:
@@ -82,28 +81,35 @@ jobs:
           EOF
           chmod 600 "$HOME/.ssh/config"
 
-      # The 23 random logos are 8.5 MB of the 9.4 MB payload and almost never change, so they are
-      # published once and re-sent only when the built files really differ from what the server
-      # already has. The revision is a hash of the exact files that would be uploaded.
+      # The 23 random logos are 8.5 MB of the 9.4 MB payload and almost never change, so the image
+      # bytes are hashed on both sides and re-sent only when they really differ. The remote script
+      # is read from stdin, and any hashing failure there yields an empty value => full re-upload.
       - name: Decide whether image assets need uploading
         id: assets
         run: |
           set -euo pipefail
           if command -v sha256sum > /dev/null 2>&1; then sum="sha256sum"; else sum="shasum -a 256"; fi
-          rev="$(cd dist && find assets -type f -exec $sum {} + | LC_ALL=C sort | $sum | cut -d' ' -f1)"
-          test -n "$rev"
-          echo "rev=$rev" >> "$GITHUB_OUTPUT"
-          remote_rev="$(ssh maayuan-deploy "cat '$ASSETS_REV_FILE' 2>/dev/null || true")"
+          local_rev="$(cd dist && find assets -type f -exec $sum {} + | awk '{print $1, $2}' | LC_ALL=C sort | $sum | cut -d' ' -f1)"
+          test -n "$local_rev"
+          remote_rev="$(ssh maayuan-deploy "bash -s -- '$DEPLOY_DIR'" <<'REMOTE'
+          cd "$1" 2>/dev/null || exit 0
+          if command -v sha256sum > /dev/null 2>&1; then sum="sha256sum"; else sum="shasum -a 256"; fi
+          test -d assets || exit 0
+          find assets -type f -exec $sum {} + | awk '{print $1, $2}' | LC_ALL=C sort | $sum | cut -d' ' -f1
+          REMOTE
+          )"
           if [ "${FORCE_ASSETS:-}" = "true" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "force_assets was requested; image assets will be uploaded."
-          elif [ "$remote_rev" = "$rev" ] && ssh maayuan-deploy "test -d '$DEPLOY_DIR/assets/images/maayuan'"; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Image assets already on the server ($rev); publishing HTML/CSS/JS only."
+            changed=true
+            reason="force_assets was requested"
+          elif [ -n "$remote_rev" ] && [ "$remote_rev" = "$local_rev" ]; then
+            changed=false
+            reason="the live copy already matches ($local_rev)"
           else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Image assets differ from the server (${remote_rev:-none} -> $rev); uploading them."
+            changed=true
+            reason="the live copy differs (${remote_rev:-none} -> $local_rev)"
           fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "Image assets: $reason"
 
       # ~6 KB over one SSH stream: seconds even on a congested cross-border link.
       - name: Publish HTML, CSS and JS
@@ -128,8 +134,6 @@ jobs:
 
       - name: Publish image assets
         if: steps.assets.outputs.changed == 'true'
-        env:
-          ASSETS_REV: ${{ steps.assets.outputs.rev }}
         run: |
           set -euo pipefail
           tar -czf "$RUNNER_TEMP/assets.tar.gz" -C dist assets
@@ -148,7 +152,6 @@ jobs:
             mv '$DEPLOY_DIR/.assets-incoming/assets' '$DEPLOY_DIR/assets'
             rm -rf '$DEPLOY_DIR/.assets-previous' '$DEPLOY_DIR/.assets-incoming'
           "
-          ssh maayuan-deploy "printf '%s\n' '$ASSETS_REV' > '$ASSETS_REV_FILE'"
           elapsed=$((SECONDS - start))
           echo "Published ${bytes} bytes of image assets in ${elapsed}s (~$((bytes / 1024 / (elapsed > 0 ? elapsed : 1))) KiB/s)"
 
