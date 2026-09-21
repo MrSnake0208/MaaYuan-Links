@@ -28,7 +28,7 @@ npm run build
 ```text
 assets/images/
   maayuan/            # 23 款顶部随机 Logo
-  links/              # 7 个入口的专用 Logo，统一英文小写文件名
+  links/              # 8 个入口的专用 Logo，统一英文小写文件名
 design/reference-logos/ # 未采用的 GitHub 对比图、QQ 海报，不参与部署
 ```
 
@@ -36,7 +36,7 @@ design/reference-logos/ # 未采用的 GitHub 对比图、QQ 海报，不参与�
 
 新增随机款式时，将 `maayuan-款式名称.png` 放入 `assets/images/maayuan/`，并在 `logoVariants` 中加入对应名称。新链接图标放入 `assets/images/links/`，更新链接配置的 `image`。预览和构建递归收集 `assets/images/` 中的 PNG/JPEG/WebP/SVG，添加文件后需重启预览服务。
 
-GitHub 使用原 `github01.jpg`，QQ 使用原 `QQ01.jpg`。对于含留白、文字或其他品牌的展示图，配置 `crop: [原图宽, 原图高, 左坐标, 顶坐标, 正方形边长]`，通过 CSS 仅显示图标区域，不修改原图。原 `github.jpg` 与 `QQ.jpg` 移入参考目录保存。YuanHub 尚无专用资源，保留通用图标。
+GitHub 使用原 `github01.jpg`，QQ 使用原 `QQ01.jpg`。对于含留白、文字或其他品牌的展示图，配置 `crop: [原图宽, 原图高, 左坐标, 顶坐标, 正方形边长]`，通过 CSS 仅显示图标区域，不修改原图。原 `github.jpg` 与 `QQ.jpg` 移入参考目录保存。YuanHub 使用官方品牌 Logo `links/yuanhub.png`，与 `https://hub.maayuan.com/brand/yuanhub-logo.png` 字节一致（正方形圆角、无留白），因此不需要 `crop`。
 
 项目没有 ESLint 或 TypeScript 配置，`check` 执行 JavaScript 语法检查，不替代 lint 或 typecheck。
 
